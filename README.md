@@ -21,6 +21,15 @@ Elegí tu personaje y la app se detiene en tus parlamentos para que los digas vo
 - **Recuerda** el guion, las voces y por dónde ibas (en el navegador, `localStorage`).
 - Atajos: `espacio` reproducir / pausa / continuar · `←` `→` bloque anterior / siguiente. Doble clic en un bloque = leer desde ahí.
 
+## Usarla en el celular
+
+La app se publica sola en **https://incontenidos.github.io/app-actores/** cada vez que se suben cambios
+(GitHub Actions → GitHub Pages, ver `.github/workflows/deploy.yml`).
+
+Para instalarla como app: abrí el link y
+- **Android (Chrome)**: menú ⋮ → *Agregar a la pantalla principal* / *Instalar app*.
+- **iPhone (Safari)**: botón Compartir → *Agregar a inicio*.
+
 ## Voces gratis
 
 Usa la **Web Speech API** del navegador: sin costo, sin claves y sin límites.
