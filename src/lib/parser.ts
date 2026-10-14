@@ -1,3 +1,4 @@
+import { endsItalic, isAllItalic, plain, segments, sliceMarked, tidyMarks } from './marks'
 import type { RawLine, Script, ScriptBlock } from './types'
 
 /**
@@ -10,7 +11,7 @@ import type { RawLine, Script, ScriptBlock } from './types'
  *   JUAN (en voz baja): Hola.
  *   JUAN                     (nombre solo en una línea, el texto debajo)
  *   Hola.
- * Las acotaciones van entre paréntesis o como párrafos sueltos.
+ * Las didascalias (acotaciones) van entre paréntesis, en cursiva o como párrafos sueltos.
  */
 
 const UP = 'A-ZÁÉÍÓÚÜÑÀÈÌÒÙÇ'
@@ -106,7 +107,11 @@ function parenBalance(s: string): number {
 export function parseScript(lines: RawLine[], title = 'Guion'): Script {
   // Primera pasada: cuántas veces aparece cada posible nombre.
   const counts = new Map<string, number>()
-  const perLine = lines.map((l) => candidates(l.text))
+  const plainLines = lines.map((l) => plain(l.text))
+  // Una línea entera en cursiva es una didascalia, salvo el formato inequívoco "NOMBRE.— texto".
+  const perLine = lines.map((l, i) =>
+    candidates(plainLines[i]).filter((c) => !isAllItalic(l.text) || c.pattern === 'dash'),
+  )
   for (const cands of perLine) {
     const seen = new Set<string>()
     for (const c of cands) seen.add(normalizeName(c.name))
@@ -127,6 +132,8 @@ export function parseScript(lines: RawLine[], title = 'Guion'): Script {
 
   lines.forEach((line, i) => {
     const text = line.text
+    const plainText = plainLines[i]
+    const italic = isAllItalic(text)
     const cur = current as ScriptBlock | null
 
     // Seguimos dentro de una acotación con paréntesis abierto.
@@ -135,7 +142,7 @@ export function parseScript(lines: RawLine[], title = 'Guion'): Script {
       return
     }
 
-    if (HEADING_RE.test(text) && text.length <= 60) {
+    if (HEADING_RE.test(plainText) && plainText.length <= 60) {
       push({ kind: 'heading', text, page: line.page })
       interruption = false
       return
@@ -151,7 +158,8 @@ export function parseScript(lines: RawLine[], title = 'Guion'): Script {
     const speaker = valid[0]
     if (speaker) {
       const character = normalizeName(speaker.name)
-      const rest = stripLeadingDash(speaker.rest)
+      // El resto de la línea, conservando qué partes están en cursiva.
+      const rest = stripLeadingDash(sliceMarked(text, plainText.length - speaker.rest.length))
       const body = [speaker.paren, rest].filter(Boolean).join(' ')
       push({ kind: 'dialogue', character, text: body, page: line.page })
       lastSpeaker = character
@@ -159,7 +167,18 @@ export function parseScript(lines: RawLine[], title = 'Guion'): Script {
       return
     }
 
-    if (text.startsWith('(')) {
+    if (italic && !line.gapBefore) {
+      // Cursiva que sigue de la línea anterior (una didascalia partida en dos renglones).
+      const continuesDialogue =
+        cur?.kind === 'dialogue' && (endsItalic(cur.text) || parenBalance(cur.text) > 0)
+      const continuesDirection = cur?.kind === 'direction' && isAllItalic(cur.text)
+      if (continuesDialogue || continuesDirection) {
+        cur!.text += ' ' + text
+        return
+      }
+    }
+
+    if (plainText.startsWith('(') || italic) {
       interruption = cur?.kind === 'dialogue' || (interruption && cur?.kind === 'direction')
       push({ kind: 'direction', text, page: line.page })
       return
@@ -189,8 +208,8 @@ export function parseScript(lines: RawLine[], title = 'Guion'): Script {
   return {
     title,
     blocks: blocks
-      .map((b) => ({ ...b, text: b.text.replace(/\s+/g, ' ').trim() }))
-      .filter((b) => b.text !== '' || b.kind === 'dialogue')
+      .map((b) => ({ ...b, text: tidyMarks(b.text.replace(/\s+/g, ' ').trim()) }))
+      .filter((b) => plain(b.text).trim() !== '' || b.kind === 'dialogue')
       .map((b, id) => ({ ...b, id })),
   }
 }
@@ -206,10 +225,12 @@ export function charactersOf(script: Script): { name: string; lines: number }[] 
     .sort((a, b) => b.lines - a.lines || a.name.localeCompare(b.name, 'es'))
 }
 
-/** Quita las acotaciones entre paréntesis de un texto (para no leerlas en voz alta). */
+/** Lo que dice el personaje: sin didascalias (paréntesis ni cursiva). */
 export function stripInlineDirections(text: string): string {
-  return text
-    .replace(/\([^)]*\)/g, ' ')
+  return segments(text)
+    .filter((seg) => !seg.direction)
+    .map((seg) => seg.text)
+    .join('')
     .replace(/\s+([.,;:!?…])/g, '$1')
     .replace(/\s+/g, ' ')
     .trim()

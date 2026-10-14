@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { charactersOf, parseScript, stripInlineDirections } from './parser'
+import { IT_CLOSE, IT_OPEN, segments } from './marks'
 import { plainTextToLines, removePageFurniture } from './pdfText'
 
 const parse = (text: string) => parseScript(plainTextToLines(text))
@@ -98,6 +99,53 @@ JUAN.— Volví.`)
   it('no toma frases con dos puntos como personajes', () => {
     const s = parse(`ANA: Mirá esto: es increíble.
 ANA: Escuchame: no.`)
+    expect(charactersOf(s)).toEqual([{ name: 'ANA', lines: 2 }])
+  })
+})
+
+// En las pruebas, *texto* representa texto en cursiva del PDF.
+const italics = (text: string) =>
+  plainTextToLines(text).map((l) => ({ ...l, text: l.text.replace(/\*([^*]*)\*/g, `${IT_OPEN}$1${IT_CLOSE}`) }))
+const show = (s: string) => s.replace(new RegExp(IT_OPEN, 'g'), '*').replace(new RegExp(IT_CLOSE, 'g'), '*')
+
+describe('didascalias en cursiva', () => {
+  it('una línea en cursiva es una didascalia y no corta al personaje', () => {
+    const s = parseScript(
+      italics(`*Una sala humilde. Es de noche.*
+*Entra Juan.*
+JUAN.— Ya voy.
+*Se sienta y la mira*
+*largamente.*
+No me mires así.
+MARÍA.— *Sin mirarlo.* Te miro
+como quiero.`),
+    )
+    expect(s.blocks.map((b) => (b.kind === 'dialogue' ? `${b.character}: ${show(b.text)}` : `[${b.kind}] ${show(b.text)}`))).toEqual([
+      '[direction] *Una sala humilde. Es de noche. Entra Juan.*',
+      'JUAN: Ya voy.',
+      '[direction] *Se sienta y la mira largamente.*',
+      'JUAN: No me mires así.',
+      'MARÍA: *Sin mirarlo.* Te miro como quiero.',
+    ])
+  })
+
+  it('la cursiva dentro de un parlamento no se dice', () => {
+    const [b] = parseScript(italics('JUAN.— Hola *(sonríe)* y *se va* chau.')).blocks
+    expect(stripInlineDirections(b.text)).toBe('Hola y chau.')
+    expect(segments(b.text)).toEqual([
+      { direction: false, text: 'Hola ' },
+      { direction: true, text: '(sonríe)' },
+      { direction: false, text: ' y ' },
+      { direction: true, text: 'se va' },
+      { direction: false, text: ' chau.' },
+    ])
+  })
+
+  it('una línea en cursiva que parece un nombre no es un personaje', () => {
+    const s = parseScript(italics(`ANA: Hola.
+*OSCURIDAD: todo se apaga.*
+ANA: Chau.
+*OSCURIDAD: vuelve.*`))
     expect(charactersOf(s)).toEqual([{ name: 'ANA', lines: 2 }])
   })
 })

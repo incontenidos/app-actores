@@ -195,16 +195,28 @@ export function CastPanel({ characters, settings, voices, sampleLine, onChange, 
       </section>
 
       <section>
-        <h3>Acotaciones</h3>
+        <h3>Didascalias</h3>
+        <p className="muted small">
+          Lo que está en <em>cursiva</em> o (entre paréntesis) es una didascalia: se ve en el guion, pero los
+          personajes no lo dicen.
+        </p>
         <label className="check">
           <input
             type="checkbox"
             checked={settings.readDirections}
             onChange={(e) => set({ readDirections: e.target.checked })}
           />
-          Leer acotaciones y títulos con un narrador
+          Que un narrador lea las didascalias entre parlamentos y los títulos
         </label>
-        {settings.readDirections && (
+        <label className="check">
+          <input
+            type="checkbox"
+            checked={settings.readInlineDirections}
+            onChange={(e) => set({ readInlineDirections: e.target.checked })}
+          />
+          Que el narrador lea también las didascalias dentro de los parlamentos
+        </label>
+        {(settings.readDirections || settings.readInlineDirections) && (
           <VoiceControls
             label="narrador"
             value={settings.narrator}
@@ -214,14 +226,6 @@ export function CastPanel({ characters, settings, voices, sampleLine, onChange, 
             onPreview={() => preview('Se abre el telón. Una sala humilde.', settings.narrator)}
           />
         )}
-        <label className="check">
-          <input
-            type="checkbox"
-            checked={settings.readInlineDirections}
-            onChange={(e) => set({ readInlineDirections: e.target.checked })}
-          />
-          Leer los paréntesis dentro de los parlamentos
-        </label>
       </section>
     </div>
   )

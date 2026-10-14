@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { characterHue } from '../lib/colors'
+import { plain, segments } from '../lib/marks'
 import type { ScriptBlock, Settings } from '../lib/types'
 import type { PlayerStatus } from '../hooks/usePlayer'
 
@@ -45,7 +46,7 @@ function BlockEditor({
             onClose()
           }}
         >
-          <option value={DIRECTION}>Acotación (nadie)</option>
+          <option value={DIRECTION}>Didascalia (no la dice nadie)</option>
           {characters.map((c) => (
             <option key={c} value={c}>
               {c}
@@ -129,15 +130,17 @@ export function ScriptView({ blocks, characters, current, status, settings, onPl
                   : undefined
               }
             >
-              {b.text.split(/(\([^)]*\))/).map((part, k) =>
-                part.startsWith('(') ? (
-                  <em key={k} className="inline-direction">
-                    {part}
-                  </em>
-                ) : (
-                  part
-                ),
-              )}
+              {b.kind === 'dialogue'
+                ? segments(b.text).map((seg, k) =>
+                    seg.direction ? (
+                      <em key={k} className="inline-direction">
+                        {seg.text}
+                      </em>
+                    ) : (
+                      seg.text
+                    ),
+                  )
+                : plain(b.text)}
             </div>
             {isCurrent && status === 'waiting' && <div className="your-turn">Tu turno — decí tu texto</div>}
             {editing === i && (

@@ -1,3 +1,4 @@
+import { IT_CLOSE, IT_OPEN, plain, tidyMarks } from './marks'
 import type { RawLine } from './types'
 
 /** Fragmento de texto posicionado, el subconjunto que usamos de los items de pdf.js. */
@@ -7,6 +8,8 @@ export interface PositionedText {
   y: number
   width: number
   height: number
+  /** Escrito en cursiva (didascalia). */
+  italic?: boolean
 }
 
 interface Row {
@@ -48,10 +51,10 @@ function rowText(row: Row): string {
       const needsSpace = gap > Math.max(1, it.height * 0.15)
       if (needsSpace && !out.endsWith(' ') && !it.str.startsWith(' ')) out += ' '
     }
-    out += it.str
+    out += it.italic && it.str.trim() ? IT_OPEN + it.str + IT_CLOSE : it.str
     prevEnd = it.x + it.width
   }
-  return out.replace(/\s+/g, ' ').trim()
+  return tidyMarks(out.replace(/\s+/g, ' ').trim())
 }
 
 function median(values: number[]): number {
@@ -80,7 +83,7 @@ export function pagesToLines(pages: PositionedText[][]): RawLine[] {
   perPage.forEach((rows, pageIndex) => {
     rows.forEach((row, i) => {
       const text = rowText(row)
-      if (!text) return
+      if (!text.replace(/[\uE000\uE001]/g, '')) return
       const gapBefore = i === 0 ? true : rows[i - 1].y - row.y > typical * 1.45
       lines.push({ text, page: pageIndex + 1, gapBefore })
     })
@@ -126,11 +129,11 @@ function dropLines(lines: RawLine[], drop: (l: RawLine, i: number) => boolean): 
  */
 export function removePageFurniture(lines: RawLine[], pageCount: number): RawLine[] {
   const numberEdges = pageEdges(lines, 2)
-  const withoutNumbers = dropLines(lines, (l, i) => numberEdges.has(i) && PAGE_NUMBER.test(l.text))
+  const withoutNumbers = dropLines(lines, (l, i) => numberEdges.has(i) && PAGE_NUMBER.test(plain(l.text)))
   if (pageCount < 3) return withoutNumbers
 
   const edges = pageEdges(withoutNumbers, 1)
-  const keyOf = (l: RawLine) => l.text.replace(/\d+/g, '#').toLowerCase()
+  const keyOf = (l: RawLine) => plain(l.text).replace(/\d+/g, '#').toLowerCase()
   const pagesWithText = new Map<string, Set<number>>()
   withoutNumbers.forEach((l, i) => {
     if (!edges.has(i)) return

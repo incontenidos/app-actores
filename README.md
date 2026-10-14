@@ -6,7 +6,7 @@ Elegí tu personaje y la app se detiene en tus parlamentos para que los digas vo
 ## Qué hace (primera versión)
 
 - **Carga de PDF** (o `.txt`, o texto pegado). Se procesa en el navegador con [pdf.js](https://mozilla.github.io/pdf.js/): el archivo no se sube a ningún servidor.
-- **Detecta personajes, parlamentos y acotaciones** en los formatos más comunes:
+- **Detecta personajes, parlamentos y didascalias** en los formatos más comunes:
   `JUAN.— Hola`, `JUAN: Hola`, `JUAN. Hola`, `JUAN (bajo): Hola` o el nombre solo en una línea con el texto debajo.
   Quita números de página y encabezados repetidos.
 - **Una voz por personaje**, asignada automáticamente (voces en castellano primero), con tono y velocidad ajustables y botón para probarla.
@@ -16,7 +16,7 @@ Elegí tu personaje y la app se detiene en tus parlamentos para que los digas vo
   - *los lee también*.
 
   Opción para **ocultar tu texto** (borroso) y memorizar.
-- **Acotaciones**: se pueden leer con una voz de narrador o saltear; los paréntesis dentro de un parlamento se omiten al leer (configurable).
+- **Didascalias**: lo que está en *cursiva* o entre paréntesis no lo dicen los personajes (se muestra en el guion). Opcionalmente las lee una voz de narrador, entre parlamentos y/o dentro de ellos.
 - **Correcciones a mano**: si la detección se equivoca, cada bloque tiene un ✎ para cambiar quién lo dice, y los personajes se pueden renombrar (o unir, poniendo el mismo nombre).
 - **Recuerda** el guion, las voces y por dónde ibas (en el navegador, `localStorage`).
 - Atajos: `espacio` reproducir / pausa / continuar · `←` `→` bloque anterior / siguiente. Doble clic en un bloque = leer desde ahí.

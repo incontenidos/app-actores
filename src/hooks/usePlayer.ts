@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { plain, segments } from '../lib/marks'
 import { stripInlineDirections } from '../lib/parser'
 import { estimateSpeechMs, speak, stopSpeaking } from '../lib/speech'
 import type { Script, Settings, VoiceSettings } from '../lib/types'
@@ -57,11 +58,12 @@ export function usePlayer(
         const v = voicesRef.current
 
         if (block.kind !== 'dialogue') {
-          if (s.readDirections) await speak(block.text, s.narrator, v, s.globalRate, cancelled)
+          if (s.readDirections) await speak(plain(block.text), s.narrator, v, s.globalRate, cancelled)
           continue
         }
 
-        const text = s.readInlineDirections ? block.text : stripInlineDirections(block.text)
+        // Lo que dice el personaje: sin didascalias (cursiva o paréntesis).
+        const text = stripInlineDirections(block.text)
         const mine = s.myCharacter !== '' && block.character === s.myCharacter
         if (mine && s.myLineMode === 'wait') {
           setStatus('waiting')
@@ -76,7 +78,17 @@ export function usePlayer(
           continue
         }
         const voice = s.voices[block.character ?? ''] ?? FALLBACK_VOICE
-        await speak(text, voice, v, s.globalRate, cancelled)
+        if (!s.readInlineDirections) {
+          await speak(text, voice, v, s.globalRate, cancelled)
+          continue
+        }
+        // Las didascalias del parlamento las lee el narrador; el resto, el personaje.
+        for (const seg of segments(block.text)) {
+          if (cancelled()) return
+          const said = seg.direction ? seg.text.replace(/[()]/g, ' ') : seg.text
+          if (!/[\p{L}\p{N}]/u.test(said)) continue
+          await speak(said, seg.direction ? s.narrator : voice, v, s.globalRate, cancelled)
+        }
       }
       if (!cancelled()) setStatus('idle')
     },
