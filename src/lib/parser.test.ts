@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { charactersOf, parseScript, stripInlineDirections } from './parser'
 import { IT_CLOSE, IT_OPEN, segments } from './marks'
-import { plainTextToLines, removePageFurniture } from './pdfText'
+import { lineSpacing, plainTextToLines, removePageFurniture } from './pdfText'
 
 const parse = (text: string) => parseScript(plainTextToLines(text))
 const summary = (text: string) =>
@@ -171,5 +171,12 @@ describe('removePageFurniture', () => {
     expect(removePageFurniture(lines, 4).map((l) => l.text)).toEqual(
       [1, 2, 3, 4].flatMap((page) => ['ANA.— Hola.', 'JUAN.— Sí.', `JUAN.— Línea ${page}`, 'ANA.— No.', `JUAN.— ${last[page]}`]),
     )
+  })
+})
+
+describe('lineSpacing', () => {
+  it('encuentra el interlineado aunque la mayoría sean saltos de párrafo', () => {
+    const spacings = [...Array(40).fill(27.9), ...Array(6).fill(15.8), 55.7]
+    expect(lineSpacing(spacings)).toBe(15.8)
   })
 })

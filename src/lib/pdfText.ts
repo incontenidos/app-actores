@@ -57,9 +57,19 @@ function rowText(row: Row): string {
   return tidyMarks(out.replace(/\s+/g, ' ').trim())
 }
 
-function median(values: number[]): number {
-  if (values.length === 0) return 0
-  const s = [...values].sort((a, b) => a - b)
+/**
+ * Interlineado normal (dentro de un mismo párrafo): el menor espaciado que se repite.
+ * No sirve la mediana: en muchos guiones casi todos los parlamentos ocupan un solo renglón,
+ * y lo más frecuente es justamente el espacio entre párrafos.
+ */
+export function lineSpacing(spacings: number[]): number {
+  const s = spacings.filter((v) => v > 0).sort((a, b) => a - b)
+  if (s.length === 0) return 12
+  const minCount = Math.max(2, Math.ceil(s.length * 0.02))
+  for (const v of s) {
+    const near = s.filter((w) => Math.abs(w - v) <= v * 0.08).length
+    if (near >= minCount) return v
+  }
   return s[Math.floor(s.length / 2)]
 }
 
@@ -73,11 +83,17 @@ export function pagesToLines(pages: PositionedText[][]): RawLine[] {
   const perPage = pages.map((items) => pageRows(items))
 
   // Distancia típica entre líneas consecutivas, para detectar saltos de párrafo.
+  // Ignoramos distancias menores a media letra (subíndices, fragmentos desalineados).
+  const heights = perPage.flat().map((r) => r.height).filter((h) => h > 0).sort((a, b) => a - b)
+  const minSpacing = (heights[Math.floor(heights.length / 2)] ?? 10) * 0.6
   const spacings: number[] = []
   for (const rows of perPage) {
-    for (let i = 1; i < rows.length; i++) spacings.push(rows[i - 1].y - rows[i].y)
+    for (let i = 1; i < rows.length; i++) {
+      const d = rows[i - 1].y - rows[i].y
+      if (d >= minSpacing) spacings.push(d)
+    }
   }
-  const typical = median(spacings.filter((s) => s > 0)) || 12
+  const typical = lineSpacing(spacings)
 
   const lines: RawLine[] = []
   perPage.forEach((rows, pageIndex) => {

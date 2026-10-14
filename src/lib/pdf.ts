@@ -12,7 +12,8 @@ export async function readPdf(
   onProgress?: (page: number, total: number) => void,
 ): Promise<RawLine[]> {
   const data = new Uint8Array(await file.arrayBuffer())
-  const task = getDocument({ data })
+  // fontExtraProperties: conserva el nombre de cada fuente ("...-ItalicMT"), para detectar la cursiva.
+  const task = getDocument({ data, fontExtraProperties: true })
   const doc = await task.promise
   try {
     const pages: PositionedText[][] = []
